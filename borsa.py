@@ -74,4 +74,51 @@ for i, hisse in enumerate(hisseler):
         hist = ticker.history(period="1d")
         
         if not hist.empty:
-            guncel_fiyat = hist
+            guncel_fiyat = hist['Close'].iloc[-1]
+        else:
+            guncel_fiyat = hisse["Maliyet"]
+        
+        maliyet_tutar = hisse["Maliyet"] * hisse["Adet"]
+        guncel_tutar = guncel_fiyat * hisse["Adet"]
+        kar_tl = guncel_tutar - maliyet_tutar
+        kar_yuzde = ((guncel_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100) if hisse["Maliyet"] > 0 else 0
+        
+        toplam_maliyet += maliyet_tutar
+        toplam_deger += guncel_tutar
+        
+        tablo_verisi.append({
+            "Hisse": hisse["Sembol"],
+            "Adet": hisse["Adet"],
+            "Ort. Maliyet": f"{hisse['Maliyet']:.2f}",
+            "Anlık Fiyat": f"{guncel_fiyat:.2f}",
+            "Piyasa Değeri": round(guncel_tutar, 2),
+            "Kâr/Zarar (TL)": round(kar_tl, 2),
+            "Getiri %": round(kar_yuzde, 2)
+        })
+    except:
+        pass
+    bar.progress((i + 1) / len(hisseler))
+
+bar.empty()
+
+# --- ÖZET KARTLAR ---
+genel_kar = toplam_deger - toplam_maliyet
+genel_yuzde = (genel_kar / toplam_maliyet * 100) if toplam_maliyet > 0 else 0
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Toplam Yatırım", f"{toplam_maliyet:,.2f} TL")
+col2.metric("Güncel Değer", f"{toplam_deger:,.2f} TL", delta=f"{genel_kar:,.2f} TL")
+col3.metric("Genel Getiri", f"%{genel_yuzde:.2f}", delta=f"%{genel_yuzde:.2f}")
+
+st.markdown("---")
+
+# --- DETAYLI TABLO ---
+if tablo_verisi:
+    df = pd.DataFrame(tablo_verisi)
+    # En çok kazandıran en üstte olsun
+    df = df.sort_values("Getiri %", ascending=False)
+    
+    st.subheader("📋 Hisse Senedi Detayları")
+    st.dataframe(df, use_container_width=True, hide_index=True)
+else:
+    st.warning("Veri bulunamadı.")
