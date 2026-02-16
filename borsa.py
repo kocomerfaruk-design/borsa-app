@@ -6,6 +6,38 @@ from datetime import date
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Portföy Yönetimi", page_icon="💼", layout="wide")
 
+# --- MODERN VE KOYU TEMA (CSS) ---
+st.markdown("""
+<style>
+    /* Ana arka plan rengi */
+    .stApp {
+        background-color: #121212;
+        color: #E0E0E0;
+    }
+    
+    /* Yan menü arka planı */
+    [data-testid="stSidebar"] {
+        background-color: #1E1E1E;
+    }
+
+    /* Metrik kutularını kart görünümüne getirme */
+    [data-testid="stMetric"] {
+        background-color: #1E1E1E;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 1px solid #333;
+    }
+    
+    /* Metrik başlıkları */
+    [data-testid="stMetricLabel"] {
+        color: #B0B0B0;
+        font-weight: bold;
+    }
+
+</style>
+""", unsafe_allow_html=True)
+
 # --- VARSAYILAN PORTFÖYLER ---
 def varsayilan_yukle():
     return {
@@ -88,21 +120,41 @@ else:
     for i, hisse in enumerate(hisseler):
         try:
             ticker = yf.Ticker(hisse["Sembol"])
-            hist = ticker.history(period="1d")
-            g_fiyat = hist['Close'].iloc[-1] if not hist.empty else hisse["Maliyet"]
+            # Günlük performansı ölçmek için son 2 günün verisi çekilir
+            hist = ticker.history(period="2d")
+            
+            # Günlük Fiyat ve Yüzde Değişim Hesaplama
+            if len(hist) >= 2:
+                prev_close = hist['Close'].iloc[-2]
+                g_fiyat = hist['Close'].iloc[-1]
+                gunluk_degisim = ((g_fiyat - prev_close) / prev_close) * 100
+            else:
+                g_fiyat = hist['Close'].iloc[-1] if not hist.empty else hisse["Maliyet"]
+                gunluk_degisim = 0.0
+
+            # Ok İkoları
+            if gunluk_degisim > 0:
+                gunluk_ok = f"🟢 +%{gunluk_degisim:.2f} 🔼"
+            elif gunluk_degisim < 0:
+                gunluk_ok = f"🔴 %{gunluk_degisim:.2f} 🔽"
+            else:
+                gunluk_ok = f"⚪ %0.00 ➖"
             
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
             g_tutar = g_fiyat * hisse["Adet"]
             t_maliyet += m_tutar
             t_deger += g_tutar
             
+            toplam_kar_yuzdesi = ((g_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100) if hisse["Maliyet"] > 0 else 0
+            
             tablo_verisi.append({
                 "Hisse": hisse["Sembol"],
                 "Adet": hisse["Adet"],
                 "Maliyet": f"{hisse['Maliyet']:.2f}",
                 "Fiyat": f"{g_fiyat:.2f}",
+                "Günlük %": gunluk_ok,
                 "Değer": round(g_tutar, 2),
-                "Kâr %": round(((g_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100), 2) if hisse["Maliyet"] > 0 else 0
+                "Genel Kâr %": round(toplam_kar_yuzdesi, 2)
             })
         except:
             pass
@@ -119,7 +171,12 @@ else:
     c3.metric("Toplam Getiri", f"%{g_yuzde:.2f}", delta=f"%{g_yuzde:.2f}")
 
     st.markdown("---")
-    st.dataframe(pd.DataFrame(tablo_verisi).sort_values("Kâr %", ascending=False), use_container_width=True, hide_index=True)
+    
+    # Tabloyu Gösterme
+    df = pd.DataFrame(tablo_verisi)
+    if not df.empty:
+        df = df.sort_values("Genel Kâr %", ascending=False)
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
     # Hisse Silme
     st.markdown("---")
