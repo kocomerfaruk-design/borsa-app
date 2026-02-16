@@ -56,4 +56,99 @@ secili_portfoy = st.sidebar.selectbox("Görüntülenecek Liste", secenekler)
 st.sidebar.markdown("---")
 
 # 3. Hisse Ekleme
-st
+st.sidebar.header(f"➕ {secili_portfoy} Ekle")
+with st.sidebar.form("hisse_ekle_form"):
+    s_sembol = st.text_input("Sembol (Örn: THYAO.IS)").upper()
+    s_maliyet = st.number_input("Maliyet", min_value=0.0, format="%.2f")
+    s_adet = st.number_input("Adet", min_value=1, step=1)
+    if st.form_submit_button("Hisse Ekle"):
+        if s_sembol:
+            portfoyler[secili_portfoy].append({
+                "Sembol": s_sembol,
+                "Maliyet": s_maliyet,
+                "Adet": s_adet
+            })
+            st.rerun()
+
+# --- ANA EKRAN ---
+st.title(f"📊 {secili_portfoy} Analizi")
+
+hisseler = portfoyler[secili_portfoy]
+
+if not hisseler:
+    st.info("Bu portföy şu an boş. Yan menüden hisse ekleyebilirsin. 👈")
+else:
+    if st.button("🔄 Verileri Güncelle"):
+        st.rerun()
+
+    tablo_verisi = []
+    t_maliyet, t_deger = 0, 0
+    
+    bar = st.progress(0)
+    for i, hisse in enumerate(hisseler):
+        try:
+            ticker = yf.Ticker(hisse["Sembol"])
+            # Günlük performansı ölçmek için son 2 günün verisi çekilir
+            hist = ticker.history(period="2d")
+            
+            # Günlük Fiyat ve Yüzde Değişim Hesaplama
+            if len(hist) >= 2:
+                prev_close = hist['Close'].iloc[-2]
+                g_fiyat = hist['Close'].iloc[-1]
+                gunluk_degisim = ((g_fiyat - prev_close) / prev_close) * 100
+            else:
+                g_fiyat = hist['Close'].iloc[-1] if not hist.empty else hisse["Maliyet"]
+                gunluk_degisim = 0.0
+
+            # Ok İkonları
+            if gunluk_degisim > 0:
+                gunluk_ok = f"🟢 +%{gunluk_degisim:.2f} 🔼"
+            elif gunluk_degisim < 0:
+                gunluk_ok = f"🔴 %{gunluk_degisim:.2f} 🔽"
+            else:
+                gunluk_ok = f"⚪ %0.00 ➖"
+            
+            m_tutar = hisse["Maliyet"] * hisse["Adet"]
+            g_tutar = g_fiyat * hisse["Adet"]
+            t_maliyet += m_tutar
+            t_deger += g_tutar
+            
+            toplam_kar_yuzdesi = ((g_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100) if hisse["Maliyet"] > 0 else 0
+            
+            tablo_verisi.append({
+                "Hisse": hisse["Sembol"],
+                "Adet": hisse["Adet"],
+                "Maliyet": f"{hisse['Maliyet']:.2f}",
+                "Fiyat": f"{g_fiyat:.2f}",
+                "Günlük %": gunluk_ok,
+                "Değer": round(g_tutar, 2),
+                "Genel Kâr %": round(toplam_kar_yuzdesi, 2)
+            })
+        except:
+            pass
+        bar.progress((i + 1) / len(hisseler))
+    bar.empty()
+
+    # Özet Kartlar
+    g_kar = t_deger - t_maliyet
+    g_yuzde = (g_kar / t_maliyet * 100) if t_maliyet > 0 else 0
+    
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Toplam Yatırım", f"{t_maliyet:,.0f} TL")
+    c2.metric("Güncel Değer", f"{t_deger:,.0f} TL", delta=f"{g_kar:,.0f} TL")
+    c3.metric("Toplam Getiri", f"%{g_yuzde:.2f}", delta=f"%{g_yuzde:.2f}")
+
+    st.markdown("---")
+    
+    # Tabloyu Gösterme
+    df = pd.DataFrame(tablo_verisi)
+    if not df.empty:
+        df = df.sort_values("Genel Kâr %", ascending=False)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+    # Hisse Silme
+    st.markdown("---")
+    silinecek = st.selectbox("Hisse Sil", [h['Sembol'] for h in hisseler])
+    if st.button("Seçili Hisseyi Çıkar"):
+        portfoyler[secili_portfoy] = [h for h in portfoyler[secili_portfoy] if h['Sembol'] != silinecek]
+        st.rerun()
