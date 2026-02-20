@@ -51,6 +51,7 @@ def varsayilan_yukle():
             {"Sembol": "KTLEV.IS", "Maliyet": 38.20, "Adet": 261, "Tarih": "2026-01-01"}
         ],
         "Halka Arz Portföyü (~2000 TL)": [
+            # --- Mevcut Onaylı Hisseler ---
             {"Sembol": "KOTON.IS", "Maliyet": 30.50, "Adet": 65, "Tarih": "2024-04-30"},
             {"Sembol": "LILAK.IS", "Maliyet": 37.39, "Adet": 53, "Tarih": "2024-04-30"},
             {"Sembol": "RGYAS.IS", "Maliyet": 135.00, "Adet": 14, "Tarih": "2024-04-17"},
@@ -71,7 +72,47 @@ def varsayilan_yukle():
             {"Sembol": "SEGMN.IS", "Maliyet": 30.00, "Adet": 66, "Tarih": "2024-06-26"},
             {"Sembol": "EFOR.IS", "Maliyet": 14.50, "Adet": 137, "Tarih": "2024-06-26"},
             {"Sembol": "HOROZ.IS", "Maliyet": 55.00, "Adet": 36, "Tarih": "2024-05-29"},
-            {"Sembol": "BINBN.IS", "Maliyet": 91.85, "Adet": 21, "Tarih": "2024-10-03"}
+            {"Sembol": "BINBN.IS", "Maliyet": 91.85, "Adet": 21, "Tarih": "2024-10-03"},
+            
+            # --- YENİ EKLENENLER (Fiyatı Netleşenler) ---
+            {"Sembol": "CGCAM.IS", "Maliyet": 20.00, "Adet": 100, "Tarih": "2024-12-11"},
+            {"Sembol": "DURKN.IS", "Maliyet": 17.00, "Adet": 117, "Tarih": "2024-09-11"},
+            {"Sembol": "CEMZY.IS", "Maliyet": 15.30, "Adet": 130, "Tarih": "2024-08-29"},
+            {"Sembol": "OZATD.IS", "Maliyet": 105.00, "Adet": 19, "Tarih": "2024-08-27"},
+            {"Sembol": "AHSGY.IS", "Maliyet": 25.20, "Adet": 79, "Tarih": "2024-08-21"},
+            {"Sembol": "GUNDG.IS", "Maliyet": 35.00, "Adet": 57, "Tarih": "2024-08-15"},
+            {"Sembol": "MOPAS.IS", "Maliyet": 35.00, "Adet": 57, "Tarih": "2025-01-21"},
+
+            # --- YENİ EKLENENLER (Gerçek Halka Arz Fiyatları ve ~2000 TL'lik Adetleri) ---
+            {"Sembol": "SRNIT.IS", "Maliyet": 12.00, "Adet": 166, "Tarih": "2025-01-27"},
+            {"Sembol": "AKFIS.IS", "Maliyet": 38.70, "Adet": 51, "Tarih": "2025-01-15"},
+            {"Sembol": "GLRMK.IS", "Maliyet": 125.00, "Adet": 16, "Tarih": "2025-01-08"},
+            {"Sembol": "EGEGY.IS", "Maliyet": 15.00, "Adet": 133, "Tarih": "2025-01-06"},
+            {"Sembol": "ARMGD.IS", "Maliyet": 40.00, "Adet": 50, "Tarih": "2024-12-25"},
+            {"Sembol": "SMRVA.IS", "Maliyet": 22.00, "Adet": 90, "Tarih": "2024-12-12"},
+            {"Sembol": "BALSU.IS", "Maliyet": 17.57, "Adet": 113, "Tarih": "2025-02-12"},
+            {"Sembol": "KLYPV.IS", "Maliyet": 70.30, "Adet": 28, "Tarih": "2025-02-05"},
+            {"Sembol": "ENDAE.IS", "Maliyet": 17.44, "Adet": 114, "Tarih": "2025-02-05"},
+            {"Sembol": "VSNMD.IS", "Maliyet": 37.44, "Adet": 53, "Tarih": "2025-02-03"},
+            {"Sembol": "DSTKF.IS", "Maliyet": 46.98, "Adet": 42, "Tarih": "2025-01-29"},
+            {"Sembol": "BIGEN.IS", "Maliyet": 12.14, "Adet": 164, "Tarih": "2025-01-28"},
+            {"Sembol": "VAKFA.IS", "Maliyet": 14.20, "Adet": 140, "Tarih": "2025-11-12"},
+            {"Sembol": "ECOGR.IS", "Maliyet": 10.40, "Adet": 192, "Tarih": "2025-10-22"},
+            {"Sembol": "MARMR.IS", "Maliyet": 1.36, "Adet": 1470, "Tarih": "2025-09-16"},
+            {"Sembol": "DOFRB.IS", "Maliyet": 45.00, "Adet": 44, "Tarih": "2025-09-03"},
+            {"Sembol": "DMLKT.IS", "Maliyet": 7.59, "Adet": 263, "Tarih": "2025-08-04"},
+            {"Sembol": "BULGS.IS", "Maliyet": 12.18, "Adet": 164, "Tarih": "2025-02-14"},
+            {"Sembol": "UCAY.IS", "Maliyet": 18.00, "Adet": 111, "Tarih": "2026-01-14"},
+            {"Sembol": "FRMPL.IS", "Maliyet": 30.24, "Adet": 66, "Tarih": "2026-01-07"},
+            {"Sembol": "ZGYO.IS", "Maliyet": 9.77, "Adet": 204, "Tarih": "2026-01-07"},
+            {"Sembol": "MEYSU.IS", "Maliyet": 7.50, "Adet": 266, "Tarih": "2026-01-05"},
+            {"Sembol": "ARFYE.IS", "Maliyet": 19.50, "Adet": 102, "Tarih": "2025-12-25"},
+            {"Sembol": "ZERGY.IS", "Maliyet": 13.00, "Adet": 153, "Tarih": "2025-12-10"},
+            {"Sembol": "PAHOL.IS", "Maliyet": 1.50, "Adet": 1333, "Tarih": "2025-11-12"},
+            {"Sembol": "ATATR.IS", "Maliyet": 11.20, "Adet": 178, "Tarih": "2026-02-11"},
+            {"Sembol": "BESTE.IS", "Maliyet": 14.70, "Adet": 136, "Tarih": "2026-02-05"},
+            {"Sembol": "AKHAN.IS", "Maliyet": 21.50, "Adet": 93, "Tarih": "2026-01-28"},
+            {"Sembol": "NETCD.IS", "Maliyet": 46.00, "Adet": 43, "Tarih": "2026-01-28"},
         ]
     }
 
