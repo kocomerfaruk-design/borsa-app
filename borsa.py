@@ -3,31 +3,56 @@ import yfinance as yf
 import pandas as pd
 from datetime import date
 
+# --- YARDIMCI FONKSİYON: GEÇMİŞ HİSSE SAYISINI BULMA ---
+def o_tarihteki_hisse_sayisini_bul(ticker_obj, alis_tarihi):
+    try:
+        guncel_hisse_sayisi = ticker_obj.info.get('sharesOutstanding', 0)
+        if not guncel_hisse_sayisi:
+            return 0
+        
+        # Bölünme geçmişini al
+        bolunmeler = ticker_obj.actions[ticker_obj.actions['Stock Splits'] > 0] if not ticker_obj.actions.empty else pd.DataFrame()
+        
+        if not bolunmeler.empty:
+            # Zaman dilimi (timezone) hatalarını önlemek için utc=True kullanıyoruz
+            gelecek_bolunmeler = bolunmeler[bolunmeler.index > pd.to_datetime(alis_tarihi, utc=True)]
+            gecmis_hisse_sayisi = guncel_hisse_sayisi
+            for ratio in gelecek_bolunmeler['Stock Splits']:
+                if ratio > 0:
+                    gecmis_hisse_sayisi = gecmis_hisse_sayisi / ratio
+            return gecmis_hisse_sayisi
+        else:
+            return guncel_hisse_sayisi
+    except:
+        # Veri çekilemezse varsayılan olarak güncel sayıyı döndür
+        return ticker_obj.info.get('sharesOutstanding', 0)
+
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Portföy Yönetimi", page_icon="💼", layout="wide")
 
 # --- VARSAYILAN PORTFÖYLER ---
+# Piyasa değerini bulmak için Tarih (Tarih) verisi eklendi.
 def varsayilan_yukle():
     return {
         "Alfa Portföyü (Yüksek Risk)": [
-            {"Sembol": "INVEO.IS", "Maliyet": 8.78, "Adet": 1139},
-            {"Sembol": "SANEL.IS", "Maliyet": 32.00, "Adet": 312},
-            {"Sembol": "KRSTL.IS", "Maliyet": 11.47, "Adet": 871},
-            {"Sembol": "ISGSY.IS", "Maliyet": 73.40, "Adet": 136},
-            {"Sembol": "MACKO.IS", "Maliyet": 25.78, "Adet": 388}
+            {"Sembol": "INVEO.IS", "Maliyet": 8.78, "Adet": 1139, "Tarih": "2024-09-01"},
+            {"Sembol": "SANEL.IS", "Maliyet": 32.00, "Adet": 312, "Tarih": "2024-09-01"},
+            {"Sembol": "KRSTL.IS", "Maliyet": 11.47, "Adet": 871, "Tarih": "2024-09-01"},
+            {"Sembol": "ISGSY.IS", "Maliyet": 73.40, "Adet": 136, "Tarih": "2024-09-01"},
+            {"Sembol": "MACKO.IS", "Maliyet": 25.78, "Adet": 388, "Tarih": "2024-09-01"}
         ],
         "Beta Portföyü (Orta Risk)": [
-            {"Sembol": "NTGAZ.IS", "Maliyet": 11.49, "Adet": 870},
-            {"Sembol": "TKNSA.IS", "Maliyet": 25.48, "Adet": 392},
-            {"Sembol": "ATATP.IS", "Maliyet": 156.60, "Adet": 63},
-            {"Sembol": "BIZIM.IS", "Maliyet": 32.18, "Adet": 310},
-            {"Sembol": "ALVES.IS", "Maliyet": 4.22, "Adet": 2369}
+            {"Sembol": "NTGAZ.IS", "Maliyet": 11.49, "Adet": 870, "Tarih": "2024-09-01"},
+            {"Sembol": "TKNSA.IS", "Maliyet": 25.48, "Adet": 392, "Tarih": "2024-09-01"},
+            {"Sembol": "ATATP.IS", "Maliyet": 156.60, "Adet": 63, "Tarih": "2024-09-01"},
+            {"Sembol": "BIZIM.IS", "Maliyet": 32.18, "Adet": 310, "Tarih": "2024-09-01"},
+            {"Sembol": "ALVES.IS", "Maliyet": 4.22, "Adet": 2369, "Tarih": "2024-09-01"}
         ],
         "Delta Portföyü (BIST100)": [
-            {"Sembol": "EKGYO.IS", "Maliyet": 25.50, "Adet": 392},
-            {"Sembol": "IZENR.IS", "Maliyet": 9.53, "Adet": 1049},
-            {"Sembol": "GUBRF.IS", "Maliyet": 480.50, "Adet": 20},
-            {"Sembol": "KTLEV.IS", "Maliyet": 38.20, "Adet": 261}
+            {"Sembol": "EKGYO.IS", "Maliyet": 25.50, "Adet": 392, "Tarih": "2026-01-01"},
+            {"Sembol": "IZENR.IS", "Maliyet": 9.53, "Adet": 1049, "Tarih": "2026-01-01"},
+            {"Sembol": "GUBRF.IS", "Maliyet": 480.50, "Adet": 20, "Tarih": "2026-01-01"},
+            {"Sembol": "KTLEV.IS", "Maliyet": 38.20, "Adet": 261, "Tarih": "2026-01-01"}
         ]
     }
 
@@ -61,12 +86,15 @@ with st.sidebar.form("hisse_ekle_form"):
     s_sembol = st.text_input("Sembol (Örn: THYAO.IS)").upper()
     s_maliyet = st.number_input("Maliyet", min_value=0.0, format="%.2f")
     s_adet = st.number_input("Adet", min_value=1, step=1)
+    s_tarih = st.date_input("Alım Tarihi", value=date.today()) # Tarih seçici eklendi
+    
     if st.form_submit_button("Hisse Ekle"):
         if s_sembol:
             portfoyler[secili_portfoy].append({
                 "Sembol": s_sembol,
                 "Maliyet": s_maliyet,
-                "Adet": s_adet
+                "Adet": s_adet,
+                "Tarih": str(s_tarih)
             })
             st.rerun()
 
@@ -88,41 +116,34 @@ else:
     for i, hisse in enumerate(hisseler):
         try:
             ticker = yf.Ticker(hisse["Sembol"])
-            # Günlük performansı ölçmek için son 2 günün verisi çekilir
-            hist = ticker.history(period="2d")
+            hist = ticker.history(period="1d")
+            g_fiyat = hist['Close'].iloc[-1] if not hist.empty else hisse["Maliyet"]
             
-            # Günlük Fiyat ve Yüzde Değişim Hesaplama
-            if len(hist) >= 2:
-                prev_close = hist['Close'].iloc[-2]
-                g_fiyat = hist['Close'].iloc[-1]
-                gunluk_degisim = ((g_fiyat - prev_close) / prev_close) * 100
-            else:
-                g_fiyat = hist['Close'].iloc[-1] if not hist.empty else hisse["Maliyet"]
-                gunluk_degisim = 0.0
-
-            # Ok İkonları
-            if gunluk_degisim > 0:
-                gunluk_ok = f"🟢 +%{gunluk_degisim:.2f} 🔼"
-            elif gunluk_degisim < 0:
-                gunluk_ok = f"🔴 %{gunluk_degisim:.2f} 🔽"
-            else:
-                gunluk_ok = f"⚪ %0.00 ➖"
+            # --- PİYASA DEĞERİ HESAPLAMALARI ---
+            alis_tarihi = hisse.get("Tarih", "2024-01-01")
+            
+            # 1. Alış anındaki simüle edilmiş piyasa değeri (Milyar TL)
+            alis_hisse_sayisi = o_tarihteki_hisse_sayisini_bul(ticker, alis_tarihi)
+            alis_ani_pd = (alis_hisse_sayisi * hisse["Maliyet"]) / 1_000_000_000 if alis_hisse_sayisi else 0
+            
+            # 2. Güncel piyasa değeri (Milyar TL)
+            guncel_pd = ticker.info.get('marketCap', 0)
+            guncel_pd_milyar = guncel_pd / 1_000_000_000 if guncel_pd else 0
             
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
             g_tutar = g_fiyat * hisse["Adet"]
             t_maliyet += m_tutar
             t_deger += g_tutar
             
-            toplam_kar_yuzdesi = ((g_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100) if hisse["Maliyet"] > 0 else 0
-            
             tablo_verisi.append({
                 "Hisse": hisse["Sembol"],
                 "Adet": hisse["Adet"],
                 "Maliyet": f"{hisse['Maliyet']:.2f}",
                 "Fiyat": f"{g_fiyat:.2f}",
-                "Günlük %": gunluk_ok,
+                "Alış PD (Milyar TL)": round(alis_ani_pd, 2) if alis_ani_pd > 0 else "-",
+                "Güncel PD (Milyar TL)": round(guncel_pd_milyar, 2) if guncel_pd_milyar > 0 else "-",
                 "Değer": round(g_tutar, 2),
-                "Genel Kâr %": round(toplam_kar_yuzdesi, 2)
+                "Kâr %": round(((g_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100), 2) if hisse["Maliyet"] > 0 else 0
             })
         except:
             pass
@@ -139,12 +160,8 @@ else:
     c3.metric("Toplam Getiri", f"%{g_yuzde:.2f}", delta=f"%{g_yuzde:.2f}")
 
     st.markdown("---")
-    
-    # Tabloyu Gösterme
-    df = pd.DataFrame(tablo_verisi)
-    if not df.empty:
-        df = df.sort_values("Genel Kâr %", ascending=False)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+    # Tabloyu ekrana bas
+    st.dataframe(pd.DataFrame(tablo_verisi).sort_values("Kâr %", ascending=False), use_container_width=True, hide_index=True)
 
     # Hisse Silme
     st.markdown("---")
