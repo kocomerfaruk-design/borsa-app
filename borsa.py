@@ -50,6 +50,29 @@ def varsayilan_yukle():
             {"Sembol": "IZENR.IS", "Maliyet": 9.53, "Adet": 1049, "Tarih": "2026-01-01"},
             {"Sembol": "GUBRF.IS", "Maliyet": 480.50, "Adet": 20, "Tarih": "2026-01-01"},
             {"Sembol": "KTLEV.IS", "Maliyet": 38.20, "Adet": 261, "Tarih": "2026-01-01"}
+        ],
+        "Halka Arz Portföyü (~2000 TL)": [
+            {"Sembol": "KOTON.IS", "Maliyet": 30.50, "Adet": 65, "Tarih": "2024-04-30"},
+            {"Sembol": "LILAK.IS", "Maliyet": 37.39, "Adet": 53, "Tarih": "2024-04-30"},
+            {"Sembol": "RGYAS.IS", "Maliyet": 135.00, "Adet": 14, "Tarih": "2024-04-17"},
+            {"Sembol": "ENTRA.IS", "Maliyet": 10.00, "Adet": 200, "Tarih": "2024-03-27"},
+            {"Sembol": "ODINE.IS", "Maliyet": 30.00, "Adet": 66, "Tarih": "2024-03-13"},
+            {"Sembol": "MOGAN.IS", "Maliyet": 11.33, "Adet": 176, "Tarih": "2024-02-28"},
+            {"Sembol": "ARTMS.IS", "Maliyet": 25.35, "Adet": 78, "Tarih": "2024-02-27"},
+            {"Sembol": "YIGIT.IS", "Maliyet": 34.68, "Adet": 57, "Tarih": "2024-05-29"},
+            {"Sembol": "ALKLC.IS", "Maliyet": 22.98, "Adet": 87, "Tarih": "2024-05-29"},
+            {"Sembol": "OZYSR.IS", "Maliyet": 28.00, "Adet": 71, "Tarih": "2024-05-23"},
+            {"Sembol": "ONRYT.IS", "Maliyet": 49.50, "Adet": 40, "Tarih": "2024-05-22"},
+            {"Sembol": "HRKET.IS", "Maliyet": 70.00, "Adet": 28, "Tarih": "2024-05-15"},
+            {"Sembol": "KOCMT.IS", "Maliyet": 20.50, "Adet": 97, "Tarih": "2024-05-09"},
+            {"Sembol": "ALTNY.IS", "Maliyet": 32.00, "Adet": 62, "Tarih": "2024-05-08"},
+            {"Sembol": "TCKRC.IS", "Maliyet": 24.00, "Adet": 83, "Tarih": "2024-08-14"},
+            {"Sembol": "BAHKM.IS", "Maliyet": 51.00, "Adet": 39, "Tarih": "2024-08-05"},
+            {"Sembol": "DCTTR.IS", "Maliyet": 14.00, "Adet": 142, "Tarih": "2024-07-25"},
+            {"Sembol": "SEGMN.IS", "Maliyet": 30.00, "Adet": 66, "Tarih": "2024-06-26"},
+            {"Sembol": "EFOR.IS", "Maliyet": 14.50, "Adet": 137, "Tarih": "2024-06-26"},
+            {"Sembol": "HOROZ.IS", "Maliyet": 55.00, "Adet": 36, "Tarih": "2024-05-29"},
+            {"Sembol": "BINBN.IS", "Maliyet": 91.85, "Adet": 21, "Tarih": "2024-10-03"}
         ]
     }
 
