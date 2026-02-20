@@ -134,6 +134,18 @@ else:
             g_fiyat = hist['Close'].iloc[-1] if not hist.empty else hisse["Maliyet"]
             
             alis_tarihi = hisse.get("Tarih", "2024-01-01")
+            
+            # --- 1. GÜNCEL ADET HESAPLAMA (BEDELSİZ DÜZELTMESİ) ---
+            guncel_adet = hisse["Adet"]
+            bolunmeler = ticker.actions[ticker.actions['Stock Splits'] > 0] if hasattr(ticker, 'actions') and not ticker.actions.empty else pd.DataFrame()
+            
+            if not bolunmeler.empty:
+                gelecek_bolunmeler = bolunmeler[bolunmeler.index > pd.to_datetime(alis_tarihi, utc=True)]
+                for ratio in gelecek_bolunmeler['Stock Splits']:
+                    if ratio > 0:
+                        guncel_adet = guncel_adet * ratio
+
+            # --- 2. PİYASA DEĞERİ VE KÂR HESAPLARI ---
             alis_hisse_sayisi = o_tarihteki_hisse_sayisini_bul(ticker, alis_tarihi)
             alis_ani_pd = (alis_hisse_sayisi * hisse["Maliyet"]) / 1_000_000_000 if alis_hisse_sayisi else 0
             
@@ -141,19 +153,21 @@ else:
             guncel_pd_milyar = guncel_pd / 1_000_000_000 if guncel_pd else 0
             
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
-            g_tutar = g_fiyat * hisse["Adet"]
+            
+            # İŞTE BÜTÜN DÜĞÜMÜ ÇÖZEN YER: Kârı eski adetle değil, bölünmüş güncel adetle hesaplıyoruz
+            g_tutar = g_fiyat * guncel_adet  
             
             kar_tl = g_tutar - m_tutar
-            kar_yuzde = ((g_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100) if hisse["Maliyet"] > 0 else 0
+            kar_yuzde = ((g_tutar - m_tutar) / m_tutar * 100) if m_tutar > 0 else 0
             
             t_maliyet += m_tutar
             t_deger += g_tutar
             
-            # Alış Tarihi Sütunu Eklendi
             tablo_verisi.append({
                 "Hisse": hisse["Sembol"],
                 "Alış Tarihi": alis_tarihi,
-                "Adet": hisse["Adet"],
+                "İlk Adet": hisse["Adet"],
+                "Güncel Adet": int(guncel_adet) if guncel_adet == int(guncel_adet) else round(guncel_adet, 2),
                 "Maliyet": f"{hisse['Maliyet']:.2f}",
                 "Fiyat": f"{g_fiyat:.2f}",
                 "Alış PD (Mlyr)": round(alis_ani_pd, 2) if alis_ani_pd > 0 else "-",
@@ -181,7 +195,6 @@ else:
     # Tabloyu Renklendirme ve Gösterme İşlemi
     if tablo_verisi:
         
-        # Kullanıcının sıralama yapabilmesi için yeni seçim aracı eklendi
         siralama_secimi = st.radio(
             "Tablo Sıralaması:",
             ["Kâr % (Yüksekten Düşüğe)", "Alış Tarihi (Eskiden Yeniye)", "Alış Tarihi (Yeniden Eskiye)"],
@@ -190,7 +203,6 @@ else:
         
         df = pd.DataFrame(tablo_verisi)
         
-        # Seçime göre tabloyu sıralama
         if siralama_secimi == "Kâr % (Yüksekten Düşüğe)":
             df = df.sort_values("Kâr %", ascending=False)
         elif siralama_secimi == "Alış Tarihi (Eskiden Yeniye)":
@@ -201,9 +213,9 @@ else:
         def kirmizi_yesil_boya(val):
             if isinstance(val, (int, float)):
                 if val > 0:
-                    return 'color: #00CC00; font-weight: bold;' # Açık Yeşil
+                    return 'color: #00CC00; font-weight: bold;'
                 elif val < 0:
-                    return 'color: #FF0000; font-weight: bold;' # Kırmızı
+                    return 'color: #FF0000; font-weight: bold;'
             return ''
         
         try:
