@@ -155,7 +155,7 @@ else:
 
     st.markdown("---")
     
-    # Tabloyu Renklendirme ve Gösterme İşlemi
+   # Tabloyu Renklendirme ve Gösterme İşlemi
     if tablo_verisi:
         df = pd.DataFrame(tablo_verisi).sort_values("Kâr %", ascending=False)
         
@@ -168,12 +168,12 @@ else:
                     return 'color: #FF0000; font-weight: bold;' # Kırmızı
             return ''
         
-        # Sadece "Kâr (TL)" ve "Kâr %" sütunlarını boya
+        # İŞTE SİHİRLİ DOKUNUŞ BURADA: .format(precision=2) eklendi
         try:
-            styled_df = df.style.map(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
+            styled_df = df.style.format(precision=2).map(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
         except AttributeError:
             # Eski pandas sürümleri için yedek
-            styled_df = df.style.applymap(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
+            styled_df = df.style.format(precision=2).applymap(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
             
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
