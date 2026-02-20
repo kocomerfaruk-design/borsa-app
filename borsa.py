@@ -14,7 +14,6 @@ def o_tarihteki_hisse_sayisini_bul(ticker_obj, alis_tarihi):
         bolunmeler = ticker_obj.actions[ticker_obj.actions['Stock Splits'] > 0] if not ticker_obj.actions.empty else pd.DataFrame()
         
         if not bolunmeler.empty:
-            # Zaman dilimi (timezone) hatalarını önlemek için utc=True kullanıyoruz
             gelecek_bolunmeler = bolunmeler[bolunmeler.index > pd.to_datetime(alis_tarihi, utc=True)]
             gecmis_hisse_sayisi = guncel_hisse_sayisi
             for ratio in gelecek_bolunmeler['Stock Splits']:
@@ -24,14 +23,12 @@ def o_tarihteki_hisse_sayisini_bul(ticker_obj, alis_tarihi):
         else:
             return guncel_hisse_sayisi
     except:
-        # Veri çekilemezse varsayılan olarak güncel sayıyı döndür
         return ticker_obj.info.get('sharesOutstanding', 0)
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Portföy Yönetimi", page_icon="💼", layout="wide")
 
 # --- VARSAYILAN PORTFÖYLER ---
-# Piyasa değerini bulmak için Tarih (Tarih) verisi eklendi.
 def varsayilan_yukle():
     return {
         "Alfa Portföyü (Yüksek Risk)": [
@@ -56,7 +53,7 @@ def varsayilan_yukle():
         ]
     }
 
-# --- HAFIZA YÖNETİMİ (Session State) ---
+# --- HAFIZA YÖNETİMİ ---
 if 'portfoyler' not in st.session_state:
     st.session_state['portfoyler'] = varsayilan_yukle()
 
@@ -65,7 +62,6 @@ portfoyler = st.session_state['portfoyler']
 # --- YAN MENÜ: YÖNETİM ---
 st.sidebar.title("🛠️ Portföy Yönetimi")
 
-# 1. Yeni Portföy Oluşturma
 yeni_liste_adi = st.sidebar.text_input("Yeni Liste Adı", placeholder="Örn: Takip Listem")
 if st.sidebar.button("Liste Oluştur"):
     if yeni_liste_adi and yeni_liste_adi not in portfoyler:
@@ -73,20 +69,16 @@ if st.sidebar.button("Liste Oluştur"):
         st.rerun()
 
 st.sidebar.markdown("---")
-
-# 2. Portföy Seçimi
 secenekler = list(portfoyler.keys())
 secili_portfoy = st.sidebar.selectbox("Görüntülenecek Liste", secenekler)
-
 st.sidebar.markdown("---")
 
-# 3. Hisse Ekleme
 st.sidebar.header(f"➕ {secili_portfoy} Ekle")
 with st.sidebar.form("hisse_ekle_form"):
     s_sembol = st.text_input("Sembol (Örn: THYAO.IS)").upper()
     s_maliyet = st.number_input("Maliyet", min_value=0.0, format="%.2f")
     s_adet = st.number_input("Adet", min_value=1, step=1)
-    s_tarih = st.date_input("Alım Tarihi", value=date.today()) # Tarih seçici eklendi
+    s_tarih = st.date_input("Alım Tarihi", value=date.today())
     
     if st.form_submit_button("Hisse Ekle"):
         if s_sembol:
@@ -119,19 +111,20 @@ else:
             hist = ticker.history(period="1d")
             g_fiyat = hist['Close'].iloc[-1] if not hist.empty else hisse["Maliyet"]
             
-            # --- PİYASA DEĞERİ HESAPLAMALARI ---
             alis_tarihi = hisse.get("Tarih", "2024-01-01")
-            
-            # 1. Alış anındaki simüle edilmiş piyasa değeri (Milyar TL)
             alis_hisse_sayisi = o_tarihteki_hisse_sayisini_bul(ticker, alis_tarihi)
             alis_ani_pd = (alis_hisse_sayisi * hisse["Maliyet"]) / 1_000_000_000 if alis_hisse_sayisi else 0
             
-            # 2. Güncel piyasa değeri (Milyar TL)
             guncel_pd = ticker.info.get('marketCap', 0)
             guncel_pd_milyar = guncel_pd / 1_000_000_000 if guncel_pd else 0
             
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
             g_tutar = g_fiyat * hisse["Adet"]
+            
+            # Kâr/Zarar Hesaplamaları
+            kar_tl = g_tutar - m_tutar
+            kar_yuzde = ((g_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100) if hisse["Maliyet"] > 0 else 0
+            
             t_maliyet += m_tutar
             t_deger += g_tutar
             
@@ -140,10 +133,11 @@ else:
                 "Adet": hisse["Adet"],
                 "Maliyet": f"{hisse['Maliyet']:.2f}",
                 "Fiyat": f"{g_fiyat:.2f}",
-                "Alış PD (Milyar TL)": round(alis_ani_pd, 2) if alis_ani_pd > 0 else "-",
-                "Güncel PD (Milyar TL)": round(guncel_pd_milyar, 2) if guncel_pd_milyar > 0 else "-",
-                "Değer": round(g_tutar, 2),
-                "Kâr %": round(((g_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100), 2) if hisse["Maliyet"] > 0 else 0
+                "Alış PD (Mlyr)": round(alis_ani_pd, 2) if alis_ani_pd > 0 else "-",
+                "Güncel PD (Mlyr)": round(guncel_pd_milyar, 2) if guncel_pd_milyar > 0 else "-",
+                "Değer (TL)": round(g_tutar, 2),
+                "Kâr (TL)": round(kar_tl, 2),
+                "Kâr %": round(kar_yuzde, 2)
             })
         except:
             pass
@@ -160,8 +154,28 @@ else:
     c3.metric("Toplam Getiri", f"%{g_yuzde:.2f}", delta=f"%{g_yuzde:.2f}")
 
     st.markdown("---")
-    # Tabloyu ekrana bas
-    st.dataframe(pd.DataFrame(tablo_verisi).sort_values("Kâr %", ascending=False), use_container_width=True, hide_index=True)
+    
+    # Tabloyu Renklendirme ve Gösterme İşlemi
+    if tablo_verisi:
+        df = pd.DataFrame(tablo_verisi).sort_values("Kâr %", ascending=False)
+        
+        # Değere göre renk atayan fonksiyon
+        def kirmizi_yesil_boya(val):
+            if isinstance(val, (int, float)):
+                if val > 0:
+                    return 'color: #00CC00; font-weight: bold;' # Açık Yeşil
+                elif val < 0:
+                    return 'color: #FF0000; font-weight: bold;' # Kırmızı
+            return ''
+        
+        # Sadece "Kâr (TL)" ve "Kâr %" sütunlarını boya
+        try:
+            styled_df = df.style.map(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
+        except AttributeError:
+            # Eski pandas sürümleri için yedek
+            styled_df = df.style.applymap(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
+            
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
     # Hisse Silme
     st.markdown("---")
