@@ -10,7 +10,6 @@ def o_tarihteki_hisse_sayisini_bul(ticker_obj, alis_tarihi):
         if not guncel_hisse_sayisi:
             return 0
         
-        # Bölünme geçmişini al
         bolunmeler = ticker_obj.actions[ticker_obj.actions['Stock Splits'] > 0] if not ticker_obj.actions.empty else pd.DataFrame()
         
         if not bolunmeler.empty:
@@ -144,15 +143,16 @@ else:
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
             g_tutar = g_fiyat * hisse["Adet"]
             
-            # Kâr/Zarar Hesaplamaları
             kar_tl = g_tutar - m_tutar
             kar_yuzde = ((g_fiyat - hisse["Maliyet"]) / hisse["Maliyet"] * 100) if hisse["Maliyet"] > 0 else 0
             
             t_maliyet += m_tutar
             t_deger += g_tutar
             
+            # Alış Tarihi Sütunu Eklendi
             tablo_verisi.append({
                 "Hisse": hisse["Sembol"],
+                "Alış Tarihi": alis_tarihi,
                 "Adet": hisse["Adet"],
                 "Maliyet": f"{hisse['Maliyet']:.2f}",
                 "Fiyat": f"{g_fiyat:.2f}",
@@ -178,11 +178,26 @@ else:
 
     st.markdown("---")
     
-   # Tabloyu Renklendirme ve Gösterme İşlemi
+    # Tabloyu Renklendirme ve Gösterme İşlemi
     if tablo_verisi:
-        df = pd.DataFrame(tablo_verisi).sort_values("Kâr %", ascending=False)
         
-        # Değere göre renk atayan fonksiyon
+        # Kullanıcının sıralama yapabilmesi için yeni seçim aracı eklendi
+        siralama_secimi = st.radio(
+            "Tablo Sıralaması:",
+            ["Kâr % (Yüksekten Düşüğe)", "Alış Tarihi (Eskiden Yeniye)", "Alış Tarihi (Yeniden Eskiye)"],
+            horizontal=True
+        )
+        
+        df = pd.DataFrame(tablo_verisi)
+        
+        # Seçime göre tabloyu sıralama
+        if siralama_secimi == "Kâr % (Yüksekten Düşüğe)":
+            df = df.sort_values("Kâr %", ascending=False)
+        elif siralama_secimi == "Alış Tarihi (Eskiden Yeniye)":
+            df = df.sort_values("Alış Tarihi", ascending=True)
+        elif siralama_secimi == "Alış Tarihi (Yeniden Eskiye)":
+            df = df.sort_values("Alış Tarihi", ascending=False)
+        
         def kirmizi_yesil_boya(val):
             if isinstance(val, (int, float)):
                 if val > 0:
@@ -191,11 +206,9 @@ else:
                     return 'color: #FF0000; font-weight: bold;' # Kırmızı
             return ''
         
-        # İŞTE SİHİRLİ DOKUNUŞ BURADA: .format(precision=2) eklendi
         try:
             styled_df = df.style.format(precision=2).map(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
         except AttributeError:
-            # Eski pandas sürümleri için yedek
             styled_df = df.style.format(precision=2).applymap(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
             
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
