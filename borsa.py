@@ -33,11 +33,10 @@ st.set_page_config(page_title="Portföy Yönetimi", page_icon="💼", layout="wi
 def varsayilan_yukle():
     return {
         "Alfa Portföyü (Yüksek Risk)": [
-            {"Sembol": "INVEO.IS", "Maliyet": 8.78, "Adet": 1139, "Tarih": "2024-09-01"},
-            {"Sembol": "SANEL.IS", "Maliyet": 32.00, "Adet": 312, "Tarih": "2024-09-01"},
-            {"Sembol": "KRSTL.IS", "Maliyet": 11.47, "Adet": 871, "Tarih": "2024-09-01"},
-            {"Sembol": "ISGSY.IS", "Maliyet": 73.40, "Adet": 136, "Tarih": "2024-09-01"},
-            {"Sembol": "MACKO.IS", "Maliyet": 25.78, "Adet": 388, "Tarih": "2024-09-01"}
+            {"Sembol": "A1CAP.IS", "Maliyet": 17.58, "Adet": 283, "Tarih": "2025-03-03"},
+            {"Sembol": "ESCOM.IS", "Maliyet": 5.87, "Adet": 849, "Tarih": "2025-03-03"},
+            {"Sembol": "KRSTL.IS", "Maliyet": 9.97, "Adet": 500, "Tarih": "2025-03-03"},
+            {"Sembol": "LMKDC.IS", "Maliyet": 30.88, "Adet": 161, "Tarih": "2025-03-03"},
         ],
 
         "Halka Arz Portföyü (~2000 TL)": [
@@ -207,7 +206,6 @@ else:
                 "Alış Tarihi": alis_tarihi,
                 "İlk Adet": hisse["Adet"],
                 "Güncel Adet": int(guncel_adet) if guncel_adet == int(guncel_adet) else round(guncel_adet, 2),
-                "Split": split_notu,
                 "Maliyet": f"{hisse['Maliyet']:.2f}",
                 "Fiyat": f"{g_fiyat:.2f}",
                 "Alış PD (Mlyr)": round(alis_ani_pd, 2) if alis_ani_pd > 0 else "-",
