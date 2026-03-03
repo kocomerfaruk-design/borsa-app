@@ -24,37 +24,7 @@ def o_tarihteki_hisse_sayisini_bul(ticker_obj, alis_tarihi):
     except:
         return ticker_obj.info.get('sharesOutstanding', 0)
 
-# --- SPLIT KONTROLÜ: Gerçek bölünme mü, yoksa yFinance artifact mı? ---
-def gercek_split_var_mi(ticker_obj, alis_tarihi):
-    """
-    yFinance bazen fiyat düzeltmesi için sahte split verisi döndürür.
-    Sadece ratio >= 2 olan bölünmeleri gerçek split olarak kabul ediyoruz.
-    Ayrıca alış tarihinden SONRA gerçekleşmiş olmalı.
-    """
-    try:
-        if ticker_obj.actions is None or ticker_obj.actions.empty:
-            return [], 1.0
-        
-        bolunmeler = ticker_obj.actions[ticker_obj.actions['Stock Splits'] > 0]
-        if bolunmeler.empty:
-            return [], 1.0
-        
-        alis_dt = pd.to_datetime(alis_tarihi, utc=True)
-        sonraki_bolunmeler = bolunmeler[bolunmeler.index > alis_dt]
-        
-        # Sadece ratio >= 2 olanları gerçek split say (1.0, 0.5 gibi artifact değerleri elenir)
-        gercek_bolunmeler = sonraki_bolunmeler[sonraki_bolunmeler['Stock Splits'] >= 2.0]
-        
-        if gercek_bolunmeler.empty:
-            return [], 1.0
-        
-        toplam_carpan = 1.0
-        for ratio in gercek_bolunmeler['Stock Splits']:
-            toplam_carpan *= ratio
-        
-        return gercek_bolunmeler, toplam_carpan
-    except:
-        return [], 1.0
+
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Portföy Yönetimi", page_icon="💼", layout="wide")
@@ -203,36 +173,35 @@ else:
             
             alis_tarihi = hisse.get("Tarih", "2024-01-01")
             
-            # --- 1. GÜNCEL ADET HESAPLAMA (DÜZELTİLMİŞ SPLIT MANTIĞI) ---
-            # Sadece ratio >= 2 olan gerçek bölünmeleri uygula
-            gercek_bolunmeler, toplam_carpan = gercek_split_var_mi(ticker, alis_tarihi)
-            guncel_adet = hisse["Adet"] * toplam_carpan
-
-            # --- 2. PİYASA DEĞERİ VE KÂR HESAPLARI ---
+            # --- 1. PİYASA DEĞERİ HESABI ---
             alis_hisse_sayisi = o_tarihteki_hisse_sayisini_bul(ticker, alis_tarihi)
             alis_ani_pd = (alis_hisse_sayisi * hisse["Maliyet"]) / 1_000_000_000 if alis_hisse_sayisi else 0
-            
+
             guncel_pd = ticker.info.get('marketCap', 0)
             guncel_pd_milyar = guncel_pd / 1_000_000_000 if guncel_pd else 0
-            
+
+            # --- 2. KÂR/ZARAR: PD BÜYÜMESI BAZLI (split'ten bağımsız) ---
+            # Kâr % = (Güncel PD / Alış anı PD - 1) × 100
+            # Bu yöntemle split olsa da olmasa da hesap doğru kalır
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
-            g_tutar = g_fiyat * guncel_adet
-            
-            kar_tl = g_tutar - m_tutar
-            kar_yuzde = ((g_tutar - m_tutar) / m_tutar * 100) if m_tutar > 0 else 0
-            
+
+            if alis_ani_pd > 0 and guncel_pd_milyar > 0:
+                kar_yuzde = (guncel_pd_milyar / alis_ani_pd - 1) * 100
+                kar_tl = m_tutar * (kar_yuzde / 100)
+                g_tutar = m_tutar + kar_tl
+            else:
+                # PD verisi yoksa fiyat bazlı hesaba düş
+                g_tutar = g_fiyat * hisse["Adet"]
+                kar_tl = g_tutar - m_tutar
+                kar_yuzde = ((g_tutar - m_tutar) / m_tutar * 100) if m_tutar > 0 else 0
+
             t_maliyet += m_tutar
             t_deger += g_tutar
-            
-            # Split oldu mu göstergesi
-            split_notu = f"✅ {toplam_carpan:.0f}x" if toplam_carpan > 1 else "-"
-            
+
             tablo_verisi.append({
                 "Hisse": hisse["Sembol"],
                 "Alış Tarihi": alis_tarihi,
-                "İlk Adet": hisse["Adet"],
-                "Güncel Adet": int(guncel_adet) if guncel_adet == int(guncel_adet) else round(guncel_adet, 2),
-                "Split": split_notu,
+                "Adet": hisse["Adet"],
                 "Maliyet": f"{hisse['Maliyet']:.2f}",
                 "Fiyat": f"{g_fiyat:.2f}",
                 "Alış PD (Mlyr)": round(alis_ani_pd, 2) if alis_ani_pd > 0 else "-",
