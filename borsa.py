@@ -222,11 +222,15 @@ else:
     # Özet Kartlar
     g_kar = t_deger - t_maliyet
     g_yuzde = (g_kar / t_maliyet * 100) if t_maliyet > 0 else 0
-    
+
+    # delta_color: "normal" yeşil/kırmızı, "off" gri/nötr
+    deger_renk = "normal" if g_kar != 0 else "off"
+    getiri_renk = "normal" if g_yuzde != 0 else "off"
+
     c1, c2, c3 = st.columns(3)
     c1.metric("Toplam Yatırım", f"{t_maliyet:,.0f} TL")
-    c2.metric("Güncel Değer", f"{t_deger:,.0f} TL", delta=f"{g_kar:,.0f} TL")
-    c3.metric("Toplam Getiri", f"%{g_yuzde:.2f}", delta=f"%{g_yuzde:.2f}")
+    c2.metric("Güncel Değer", f"{t_deger:,.0f} TL", delta=f"{g_kar:,.0f} TL", delta_color=deger_renk)
+    c3.metric("Toplam Getiri", f"%{g_yuzde:.2f}", delta=f"%{g_yuzde:.2f}", delta_color=getiri_renk)
 
     st.markdown("---")
     
