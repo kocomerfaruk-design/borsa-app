@@ -39,19 +39,7 @@ def varsayilan_yukle():
             {"Sembol": "ISGSY.IS", "Maliyet": 73.40, "Adet": 136, "Tarih": "2024-09-01"},
             {"Sembol": "MACKO.IS", "Maliyet": 25.78, "Adet": 388, "Tarih": "2024-09-01"}
         ],
-        "Beta Portföyü (Orta Risk)": [
-            {"Sembol": "NTGAZ.IS", "Maliyet": 11.49, "Adet": 870, "Tarih": "2024-09-01"},
-            {"Sembol": "TKNSA.IS", "Maliyet": 25.48, "Adet": 392, "Tarih": "2024-09-01"},
-            {"Sembol": "ATATP.IS", "Maliyet": 156.60, "Adet": 63, "Tarih": "2024-09-01"},
-            {"Sembol": "BIZIM.IS", "Maliyet": 32.18, "Adet": 310, "Tarih": "2024-09-01"},
-            {"Sembol": "ALVES.IS", "Maliyet": 4.22, "Adet": 2369, "Tarih": "2024-09-01"}
-        ],
-        "Delta Portföyü (BIST100)": [
-            {"Sembol": "EKGYO.IS", "Maliyet": 25.50, "Adet": 392, "Tarih": "2026-01-01"},
-            {"Sembol": "IZENR.IS", "Maliyet": 9.53, "Adet": 1049, "Tarih": "2026-01-01"},
-            {"Sembol": "GUBRF.IS", "Maliyet": 480.50, "Adet": 20, "Tarih": "2026-01-01"},
-            {"Sembol": "KTLEV.IS", "Maliyet": 38.20, "Adet": 261, "Tarih": "2026-01-01"}
-        ],
+
         "Halka Arz Portföyü (~2000 TL)": [
             {"Sembol": "KOTON.IS", "Maliyet": 30.50, "Adet": 65, "Tarih": "2024-04-30"},
             {"Sembol": "LILAK.IS", "Maliyet": 37.39, "Adet": 53, "Tarih": "2024-04-30"},
@@ -173,16 +161,32 @@ else:
             
             alis_tarihi = hisse.get("Tarih", "2024-01-01")
             
-            # --- 1. PİYASA DEĞERİ HESABI ---
+            # --- 1. SPLIT KONTROLÜ: Alış tarihinden sonra gerçek bölünme oldu mu? ---
+            guncel_adet = hisse["Adet"]
+            split_notu = "-"
+            try:
+                if hasattr(ticker, 'actions') and not ticker.actions.empty:
+                    bolunmeler = ticker.actions[ticker.actions['Stock Splits'] > 0]
+                    if not bolunmeler.empty:
+                        alis_dt = pd.to_datetime(alis_tarihi, utc=True)
+                        sonraki = bolunmeler[bolunmeler.index > alis_dt]
+                        if not sonraki.empty:
+                            carpan = 1.0
+                            for ratio in sonraki['Stock Splits']:
+                                carpan *= ratio
+                            guncel_adet = hisse["Adet"] * carpan
+                            split_notu = f"✅ {carpan:.0f}x"
+            except:
+                pass
+
+            # --- 2. PİYASA DEĞERİ HESABI ---
             alis_hisse_sayisi = o_tarihteki_hisse_sayisini_bul(ticker, alis_tarihi)
             alis_ani_pd = (alis_hisse_sayisi * hisse["Maliyet"]) / 1_000_000_000 if alis_hisse_sayisi else 0
 
             guncel_pd = ticker.info.get('marketCap', 0)
             guncel_pd_milyar = guncel_pd / 1_000_000_000 if guncel_pd else 0
 
-            # --- 2. KÂR/ZARAR: PD BÜYÜMESI BAZLI (split'ten bağımsız) ---
-            # Kâr % = (Güncel PD / Alış anı PD - 1) × 100
-            # Bu yöntemle split olsa da olmasa da hesap doğru kalır
+            # --- 3. KÂR/ZARAR: PD BÜYÜMESI BAZLI (split'ten bağımsız, her zaman doğru) ---
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
 
             if alis_ani_pd > 0 and guncel_pd_milyar > 0:
@@ -190,8 +194,8 @@ else:
                 kar_tl = m_tutar * (kar_yuzde / 100)
                 g_tutar = m_tutar + kar_tl
             else:
-                # PD verisi yoksa fiyat bazlı hesaba düş
-                g_tutar = g_fiyat * hisse["Adet"]
+                # PD verisi yoksa güncel adet × fiyat ile hesapla (split yansır)
+                g_tutar = g_fiyat * guncel_adet
                 kar_tl = g_tutar - m_tutar
                 kar_yuzde = ((g_tutar - m_tutar) / m_tutar * 100) if m_tutar > 0 else 0
 
@@ -201,7 +205,9 @@ else:
             tablo_verisi.append({
                 "Hisse": hisse["Sembol"],
                 "Alış Tarihi": alis_tarihi,
-                "Adet": hisse["Adet"],
+                "İlk Adet": hisse["Adet"],
+                "Güncel Adet": int(guncel_adet) if guncel_adet == int(guncel_adet) else round(guncel_adet, 2),
+                "Split": split_notu,
                 "Maliyet": f"{hisse['Maliyet']:.2f}",
                 "Fiyat": f"{g_fiyat:.2f}",
                 "Alış PD (Mlyr)": round(alis_ani_pd, 2) if alis_ani_pd > 0 else "-",
@@ -254,7 +260,6 @@ else:
             styled_df = df.style.format(precision=2).map(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
         except AttributeError:
             styled_df = df.style.format(precision=2).applymap(kirmizi_yesil_boya, subset=["Kâr (TL)", "Kâr %"])
-            
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
     # Hisse Silme
