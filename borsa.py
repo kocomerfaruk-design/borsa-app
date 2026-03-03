@@ -24,6 +24,38 @@ def o_tarihteki_hisse_sayisini_bul(ticker_obj, alis_tarihi):
     except:
         return ticker_obj.info.get('sharesOutstanding', 0)
 
+# --- SPLIT KONTROLÜ: Gerçek bölünme mü, yoksa yFinance artifact mı? ---
+def gercek_split_var_mi(ticker_obj, alis_tarihi):
+    """
+    yFinance bazen fiyat düzeltmesi için sahte split verisi döndürür.
+    Sadece ratio >= 2 olan bölünmeleri gerçek split olarak kabul ediyoruz.
+    Ayrıca alış tarihinden SONRA gerçekleşmiş olmalı.
+    """
+    try:
+        if ticker_obj.actions is None or ticker_obj.actions.empty:
+            return [], 1.0
+        
+        bolunmeler = ticker_obj.actions[ticker_obj.actions['Stock Splits'] > 0]
+        if bolunmeler.empty:
+            return [], 1.0
+        
+        alis_dt = pd.to_datetime(alis_tarihi, utc=True)
+        sonraki_bolunmeler = bolunmeler[bolunmeler.index > alis_dt]
+        
+        # Sadece ratio >= 2 olanları gerçek split say (1.0, 0.5 gibi artifact değerleri elenir)
+        gercek_bolunmeler = sonraki_bolunmeler[sonraki_bolunmeler['Stock Splits'] >= 2.0]
+        
+        if gercek_bolunmeler.empty:
+            return [], 1.0
+        
+        toplam_carpan = 1.0
+        for ratio in gercek_bolunmeler['Stock Splits']:
+            toplam_carpan *= ratio
+        
+        return gercek_bolunmeler, toplam_carpan
+    except:
+        return [], 1.0
+
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Portföy Yönetimi", page_icon="💼", layout="wide")
 
@@ -51,7 +83,6 @@ def varsayilan_yukle():
             {"Sembol": "KTLEV.IS", "Maliyet": 38.20, "Adet": 261, "Tarih": "2026-01-01"}
         ],
         "Halka Arz Portföyü (~2000 TL)": [
-            # --- Mevcut Onaylı Hisseler ---
             {"Sembol": "KOTON.IS", "Maliyet": 30.50, "Adet": 65, "Tarih": "2024-04-30"},
             {"Sembol": "LILAK.IS", "Maliyet": 37.39, "Adet": 53, "Tarih": "2024-04-30"},
             {"Sembol": "RGYAS.IS", "Maliyet": 135.00, "Adet": 14, "Tarih": "2024-04-17"},
@@ -73,8 +104,6 @@ def varsayilan_yukle():
             {"Sembol": "EFOR.IS", "Maliyet": 14.50, "Adet": 137, "Tarih": "2024-06-26"},
             {"Sembol": "HOROZ.IS", "Maliyet": 55.00, "Adet": 36, "Tarih": "2024-05-29"},
             {"Sembol": "BINBN.IS", "Maliyet": 91.85, "Adet": 21, "Tarih": "2024-10-03"},
-            
-            # --- YENİ EKLENENLER (Fiyatı Netleşenler) ---
             {"Sembol": "CGCAM.IS", "Maliyet": 20.00, "Adet": 100, "Tarih": "2024-12-11"},
             {"Sembol": "DURKN.IS", "Maliyet": 17.00, "Adet": 117, "Tarih": "2024-09-11"},
             {"Sembol": "CEMZY.IS", "Maliyet": 15.30, "Adet": 130, "Tarih": "2024-08-29"},
@@ -82,8 +111,6 @@ def varsayilan_yukle():
             {"Sembol": "AHSGY.IS", "Maliyet": 25.20, "Adet": 79, "Tarih": "2024-08-21"},
             {"Sembol": "GUNDG.IS", "Maliyet": 35.00, "Adet": 57, "Tarih": "2024-08-15"},
             {"Sembol": "MOPAS.IS", "Maliyet": 35.00, "Adet": 57, "Tarih": "2025-01-21"},
-
-            # --- YENİ EKLENENLER (Gerçek Halka Arz Fiyatları ve ~2000 TL'lik Adetleri) ---
             {"Sembol": "SRNIT.IS", "Maliyet": 12.00, "Adet": 166, "Tarih": "2025-01-27"},
             {"Sembol": "AKFIS.IS", "Maliyet": 38.70, "Adet": 51, "Tarih": "2025-01-15"},
             {"Sembol": "GLRMK.IS", "Maliyet": 125.00, "Adet": 16, "Tarih": "2025-01-08"},
@@ -176,15 +203,10 @@ else:
             
             alis_tarihi = hisse.get("Tarih", "2024-01-01")
             
-            # --- 1. GÜNCEL ADET HESAPLAMA (BEDELSİZ DÜZELTMESİ) ---
-            guncel_adet = hisse["Adet"]
-            bolunmeler = ticker.actions[ticker.actions['Stock Splits'] > 0] if hasattr(ticker, 'actions') and not ticker.actions.empty else pd.DataFrame()
-            
-            if not bolunmeler.empty:
-                gelecek_bolunmeler = bolunmeler[bolunmeler.index > pd.to_datetime(alis_tarihi, utc=True)]
-                for ratio in gelecek_bolunmeler['Stock Splits']:
-                    if ratio > 0:
-                        guncel_adet = guncel_adet * ratio
+            # --- 1. GÜNCEL ADET HESAPLAMA (DÜZELTİLMİŞ SPLIT MANTIĞI) ---
+            # Sadece ratio >= 2 olan gerçek bölünmeleri uygula
+            gercek_bolunmeler, toplam_carpan = gercek_split_var_mi(ticker, alis_tarihi)
+            guncel_adet = hisse["Adet"] * toplam_carpan
 
             # --- 2. PİYASA DEĞERİ VE KÂR HESAPLARI ---
             alis_hisse_sayisi = o_tarihteki_hisse_sayisini_bul(ticker, alis_tarihi)
@@ -194,9 +216,7 @@ else:
             guncel_pd_milyar = guncel_pd / 1_000_000_000 if guncel_pd else 0
             
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
-            
-            # İŞTE BÜTÜN DÜĞÜMÜ ÇÖZEN YER: Kârı eski adetle değil, bölünmüş güncel adetle hesaplıyoruz
-            g_tutar = g_fiyat * guncel_adet  
+            g_tutar = g_fiyat * guncel_adet
             
             kar_tl = g_tutar - m_tutar
             kar_yuzde = ((g_tutar - m_tutar) / m_tutar * 100) if m_tutar > 0 else 0
@@ -204,11 +224,15 @@ else:
             t_maliyet += m_tutar
             t_deger += g_tutar
             
+            # Split oldu mu göstergesi
+            split_notu = f"✅ {toplam_carpan:.0f}x" if toplam_carpan > 1 else "-"
+            
             tablo_verisi.append({
                 "Hisse": hisse["Sembol"],
                 "Alış Tarihi": alis_tarihi,
                 "İlk Adet": hisse["Adet"],
                 "Güncel Adet": int(guncel_adet) if guncel_adet == int(guncel_adet) else round(guncel_adet, 2),
+                "Split": split_notu,
                 "Maliyet": f"{hisse['Maliyet']:.2f}",
                 "Fiyat": f"{g_fiyat:.2f}",
                 "Alış PD (Mlyr)": round(alis_ani_pd, 2) if alis_ani_pd > 0 else "-",
@@ -233,9 +257,7 @@ else:
 
     st.markdown("---")
     
-    # Tabloyu Renklendirme ve Gösterme İşlemi
     if tablo_verisi:
-        
         siralama_secimi = st.radio(
             "Tablo Sıralaması:",
             ["Kâr % (Yüksekten Düşüğe)", "Alış Tarihi (Eskiden Yeniye)", "Alış Tarihi (Yeniden Eskiye)"],
