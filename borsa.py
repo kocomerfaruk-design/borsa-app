@@ -33,6 +33,7 @@ st.set_page_config(page_title="Portföy Yönetimi", page_icon="💼", layout="wi
 def varsayilan_yukle():
     return {
         "Alfa Portföyü (Yüksek Risk)": [
+            {"Sembol": "ISGSY.IS", "Maliyet": 121.90, "Adet": 41, "Tarih": "2026-03-06"},
             {"Sembol": "A1CAP.IS", "Maliyet": 17.58, "Adet": 283, "Tarih": "2025-03-03"},
             {"Sembol": "ESCOM.IS", "Maliyet": 5.87, "Adet": 849, "Tarih": "2025-03-03"},
             {"Sembol": "KRSTL.IS", "Maliyet": 9.97, "Adet": 500, "Tarih": "2025-03-03"},
@@ -101,8 +102,12 @@ def varsayilan_yukle():
     }
 
 # --- HAFIZA YÖNETİMİ ---
-if 'portfoyler' not in st.session_state:
+# Versiyon numarasını her kod değişikliğinde artır → session_state sıfırlanır
+VERI_VERSIYONU = "v6"
+
+if st.session_state.get('veri_versiyonu') != VERI_VERSIYONU:
     st.session_state['portfoyler'] = varsayilan_yukle()
+    st.session_state['veri_versiyonu'] = VERI_VERSIYONU
 
 portfoyler = st.session_state['portfoyler']
 
