@@ -188,12 +188,16 @@ else:
             # --- 3. KÂR/ZARAR HESABI ---
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
 
-            pd_hesabi_gecerli = (
-                alis_ani_pd > 0 and
-                guncel_pd_milyar > 0 and
-                alis_ani_pd < 10000 and  # uçuk PD değerlerini ele
-                0.01 < (guncel_pd_milyar / alis_ani_pd) < 1000  # %99 düşüş veya 1000x artış saçmalık
-            )
+            try:
+                pd_oran = (guncel_pd_milyar / alis_ani_pd) if alis_ani_pd > 0 else 0
+                pd_hesabi_gecerli = (
+                    alis_ani_pd > 0 and
+                    guncel_pd_milyar > 0 and
+                    alis_ani_pd < 10000 and
+                    0.01 < pd_oran < 1000
+                )
+            except:
+                pd_hesabi_gecerli = False
 
             if pd_hesabi_gecerli:
                 kar_yuzde = (guncel_pd_milyar / alis_ani_pd - 1) * 100
@@ -204,7 +208,6 @@ else:
                 g_tutar = g_fiyat * guncel_adet
                 kar_tl = g_tutar - m_tutar
                 kar_yuzde = ((g_tutar - m_tutar) / m_tutar * 100) if m_tutar > 0 else 0
-                # PD sütunlarını da gizle
                 alis_ani_pd = 0
                 guncel_pd_milyar = 0
 
