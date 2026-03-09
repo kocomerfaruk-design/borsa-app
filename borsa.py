@@ -103,7 +103,7 @@ def varsayilan_yukle():
 
 # --- HAFIZA YÖNETİMİ ---
 # Versiyon numarasını her kod değişikliğinde artır → session_state sıfırlanır
-VERI_VERSIYONU = "v6"
+VERI_VERSIYONU = "v7"
 
 if st.session_state.get('veri_versiyonu') != VERI_VERSIYONU:
     st.session_state['portfoyler'] = varsayilan_yukle()
@@ -190,31 +190,11 @@ else:
             guncel_pd = ticker.info.get('marketCap', 0)
             guncel_pd_milyar = guncel_pd / 1_000_000_000 if guncel_pd else 0
 
-            # --- 3. KÂR/ZARAR HESABI ---
+            # --- 3. KÂR/ZARAR HESABI: Fiyat × Adet (güvenilir, split yansır) ---
             m_tutar = hisse["Maliyet"] * hisse["Adet"]
-
-            try:
-                pd_oran = (guncel_pd_milyar / alis_ani_pd) if alis_ani_pd > 0 else 0
-                pd_hesabi_gecerli = (
-                    alis_ani_pd > 0 and
-                    guncel_pd_milyar > 0 and
-                    alis_ani_pd < 10000 and
-                    0.01 < pd_oran < 1000
-                )
-            except:
-                pd_hesabi_gecerli = False
-
-            if pd_hesabi_gecerli:
-                kar_yuzde = (guncel_pd_milyar / alis_ani_pd - 1) * 100
-                kar_tl = m_tutar * (kar_yuzde / 100)
-                g_tutar = m_tutar + kar_tl
-            else:
-                # PD verisi yoksa veya güvenilmezse fiyat × adet ile hesapla
-                g_tutar = g_fiyat * guncel_adet
-                kar_tl = g_tutar - m_tutar
-                kar_yuzde = ((g_tutar - m_tutar) / m_tutar * 100) if m_tutar > 0 else 0
-                alis_ani_pd = 0
-                guncel_pd_milyar = 0
+            g_tutar = g_fiyat * guncel_adet
+            kar_tl = g_tutar - m_tutar
+            kar_yuzde = ((g_tutar - m_tutar) / m_tutar * 100) if m_tutar > 0 else 0
 
             t_maliyet += m_tutar
             t_deger += g_tutar
